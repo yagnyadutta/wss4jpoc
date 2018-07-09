@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:camel="http://camel.apache.org/schema/spring"
+       xmlns:lang="http://www.springframework.org/schema/lang"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:sec="http://cxf.apache.org/configuration/security"
+       xmlns:http="http://cxf.apache.org/transports/http/configuration"
+       xmlns:jaxws="http://cxf.apache.org/jaxws"
+       xsi:schemaLocation="
+           http://cxf.apache.org/configuration/security http://cxf.apache.org/schemas/configuration/security.xsd
+           http://cxf.apache.org/transports/http/configuration http://cxf.apache.org/schemas/configuration/http-conf.xsd
+           http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+           http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd
+		   http://www.springframework.org/schema/lang http://www.springframework.org/schema/lang/spring-lang.xsd
+		   http://cxf.apache.org/jaxws
+           http://cxf.apache.org/schemas/jaxws.xsd">
+
+
+    <import resource="classpath:META-INF/cxf/cxf.xml"/>
+    <import resource="classpath:META-INF/cxf/cxf-servlet.xml"/>
+    <import resource="classpath:META-INF/spring/xua-context.xml"/>
+    <import resource="classpath:spring/sts-ut-context.xml"/>
+
+
+    <bean id="propertyPlaceholderConfigurer" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="locations" value="classpath:xua.properties"/>
+		<property name="ignoreUnresolvablePlaceholders" value="false"/>
+		<property name="ignoreResourceNotFound" value="false"/>
+	</bean>
+
+    <camel:camelContext id="camelContext">
+		<camel:jmxAgent id="jmxAgent" createConnector="false"/>
+	    <camel:routeBuilder ref="com.emc.healthcare.xds.registry.SoapRouteBuilder.xuaEnabled"/>
+        <camel:routeBuilder ref="com.emc.healthcare.xds.registry.SoapRouteBuilder.xuaDisabled"/>
+    </camel:camelContext>
+
+    <lang:groovy id="com.emc.healthcare.xds.registry.SoapRouteBuilder.xuaDisabled"
+         script-source="classpath:com/emc/healthcare/xds/registry/commons/SoapRouteBuilder.groovy">
+        <lang:property name="xuaEnabled" value="false"/>
+        <lang:property name="endpointName" value="xds-iti42-xuaDisabled"/>
+    </lang:groovy>
+
+    <lang:groovy id="com.emc.healthcare.xds.registry.SoapRouteBuilder.xuaEnabled"
+        script-source="classpath:com/emc/healthcare/xds/registry/commons/SoapRouteBuilder.groovy">
+        <lang:property name="xuaEnabled" value="true"/>
+        <lang:property name="endpointName" value="xds-iti42-xuaEnabled"/>
+    </lang:groovy>
+
+    <bean id="iheAuditorContext" class="org.openhealthtools.ihe.atna.auditor.context.AuditorModuleContext" factory-method="getContext" />
+    <bean id="iheAuditorConfig" factory-bean="iheAuditorContext" factory-method="getConfig">
+        <property name="auditRepositoryHost" value="localhost" />
+        <property name="auditRepositoryPort" value="514" />
+    </bean>
+
+
+    <!-- Arrange for auto registration of JMX beans. -->
+    <bean class="org.springframework.jmx.export.MBeanExporter">
+        <property name="autodetect" value="true"/>
+        <property name="ensureUniqueRuntimeObjectNames" value="true"/>
+        <property name="assembler">
+            <bean class="org.springframework.jmx.export.assembler.MetadataMBeanInfoAssembler">
+                <property name="attributeSource" ref="jmxAttributeSource"/>
+            </bean>
+        </property>
+        <property name="namingStrategy">
+            <bean id="namingStrategy" class="org.springframework.jmx.export.naming.MetadataNamingStrategy">
+                <property name="attributeSource" ref="jmxAttributeSource"/>
+            </bean>
+        </property>
+    </bean>
+
+    <bean id="jmxAttributeSource" class="org.springframework.jmx.export.annotation.AnnotationJmxAttributeSource"/>
+
+    <!-- <http:conduit name="*.http-conduit">
+
+        <http:tlsClientParameters disableCNCheck="true">
+            <sec:keyManagers keyPassword="${xua.server.certificate.password}">
+                <sec:keyStore type="JKS" password="${xua.keystore.password}"
+                              file="${xua.keystore.file}"/>
+            </sec:keyManagers>
+            <sec:trustManagers>
+                <sec:keyStore type="JKS" password="${xua.truststore.password}"
+                              file="${xua.truststore.file}"/>
+            </sec:trustManagers>
+        </http:tlsClientParameters>
+
+    </http:conduit> -->
+
+    <bean id="mockIti42Service" class="org.easymock.EasyMock" factory-method="createStrictMock">
+        <constructor-arg value="org.openehealth.ipf.commons.ihe.xds.iti42.Iti42PortType"/>
+    </bean>
+
+    <jaxws:endpoint id="registry" implementor="#mockIti42Service"
+		address="/iti42-xuaEnabled-wsdlPolicy" wsdlLocation="wsdl/iti42-with-policy.wsdl"
+		xmlns:ns1="urn:ihe:iti:xds-b:2007"
+		serviceName="ns1:DocumentRegistry_Service" endpointName="ns1:DocumentRegistry_Port_Soap12">
+	</jaxws:endpoint>
+</beans>

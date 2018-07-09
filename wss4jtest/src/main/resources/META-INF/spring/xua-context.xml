@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:cxf="http://cxf.apache.org/core"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:p="http://cxf.apache.org/policy" xmlns:wsp="http://www.w3.org/2006/07/ws-policy"
+
+       xsi:schemaLocation="
+           http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd           
+		   http://cxf.apache.org/policy http://cxf.apache.org/schemas/policy.xsd
+		   http://www.w3.org/2006/07/ws-policy http://www.w3.org/2006/07/ws-policy.xsd
+		   http://cxf.apache.org/core http://cxf.apache.org/schemas/core.xsd
+		   http://www.springframework.org/schema/context
+	       http://www.springframework.org/schema/context/spring-context-2.5.xsd">
+
+    <bean class="org.springframework.context.support.PropertySourcesPlaceholderConfigurer">
+       <!-- <property name="contextOverride" value="true"/>
+        <property name="systemPropertiesModeName" value="SYSTEM_PROPERTIES_MODE_OVERRIDE"/>-->
+        <property name="ignoreUnresolvablePlaceholders" value="true"/>
+        <property name="properties">
+            <props>
+                <prop key="xua.service.endpoint"/>
+                <prop key="xua.supported.authentication.methods"/>
+                <prop key="xua.saml2.token.validator">com.wss4j.test.XuaValidator</prop>
+				<prop key="xua.crypto.provider">org.apache.ws.security.components.crypto.Merlin</prop>
+                <prop key="xua.role.codeSystem"/>
+                <prop key="xua.purposeOfUse.codeSystem"/>
+                <prop key="xua.purposeOfUse.code.values"/>
+                <prop key="xua.role.code.values"/>
+                <prop key="xua.authz.consent.option">false</prop>
+            </props>
+        </property>
+    </bean>
+
+    <cxf:bus bus="cxf">
+        <cxf:properties>
+            <entry key="decryptionPropRefId" value="securityProperiesRef"/>
+            <entry key="signaturePropRefId" value="securityProperiesRef"/>
+            <entry key="securityProperiesRef" value-ref="securityProperies"/>
+            <entry key="passwordCallbackRef"
+                   value-ref="callbackHanlder"/>
+            <entry key="ws-security.saml2.validator" value-ref="xuaValidator"/>
+        </cxf:properties>
+        <cxf:outFaultInterceptors>
+            <ref bean="xuaOutFaultInterceptor"/>
+        </cxf:outFaultInterceptors>
+    </cxf:bus>
+
+    <bean id="xuaOutFaultInterceptor" class="com.wss4j.test.interceptor.XuaOutFaultInterceptor"/>
+
+    <bean id="securityProperies" class="org.springframework.beans.factory.config.PropertiesFactoryBean">
+        <property name="properties">
+            <props>
+                <prop key="org.apache.ws.security.crypto.merlin.keystore.type">jks</prop>
+                <prop key="org.apache.ws.security.crypto.merlin.keystore.password">${https.keyStorePassword}</prop>
+                <prop key="org.apache.ws.security.crypto.merlin.keystore.file">${https.keyStore}</prop>
+                <prop key="org.apache.ws.security.crypto.merlin.truststore.file">${xua.assertion.provider.trustStore}</prop>
+                <prop key="org.apache.ws.security.crypto.merlin.truststore.password">${xua.assertion.provider.trustStorePassword}</prop>
+                <prop key="org.apache.ws.security.crypto.provider">${xua.crypto.provider}</prop>
+            </props>
+        </property>
+    </bean>
+
+    <bean id="samlAssertionValidator" class="org.apache.wss4j.dom.validate.SamlAssertionValidator"/>
+
+    <bean id="xuaConfiguration" class="com.wss4j.test.config.XuaConfig">
+        <property name="authenticationMethods" ref="authenticationMethodsSet"/>
+        <property name="purposeOfUseCodes" ref="purposeOfUseCodesSet"/>
+        <property name="purposeOfUseCodeSystem" value="${xua.purposeOfUse.codeSystem}"/>
+        <property name="roles" ref="rolesSet"/>
+        <property name="serviceEndpoint" value="${xua.service.endpoint}"/>
+        <property name="authzConsentOption" value="${xua.authz.consent.option}"/>
+        <property name="roleCodeSystem" value="${xua.role.codeSystem}"/>
+    </bean>
+
+    <bean id="authenticationMethodsSet" class="org.springframework.util.StringUtils"
+          factory-method="commaDelimitedListToSet">
+        <constructor-arg type="java.lang.String" value="${xua.supported.authentication.methods}"/>
+    </bean>
+
+    <bean id="purposeOfUseCodesSet" class="org.springframework.util.StringUtils"
+          factory-method="commaDelimitedListToSet">
+        <constructor-arg type="java.lang.String" value="${xua.purposeOfUse.code.values}"/>
+    </bean>
+
+    <bean id="rolesSet" class="org.springframework.util.StringUtils" factory-method="commaDelimitedListToSet">
+        <constructor-arg type="java.lang.String" value="${xua.role.code.values}"/>
+    </bean>
+
+
+
+    <bean id="callbackHanlder" class="com.wss4j.test.hanlder.XuaCallbackHandler">
+        <property name="credentials">
+            <map>
+                <entry key="${https.server.keyAlias}" value="${https.server.privateKeyPassword}"/>
+            </map>
+        </property>
+    </bean>
+
+    <bean id="xuaValidator" class="${xua.saml2.token.validator}"/>
+
+    <p:policies id="policyFeature" enabled="true">
+        <wsp:PolicyReference URI="classpath:ws-policy.xml"/>
+    </p:policies>
+
+    <context:annotation-config />
+
+
+</beans>
+        

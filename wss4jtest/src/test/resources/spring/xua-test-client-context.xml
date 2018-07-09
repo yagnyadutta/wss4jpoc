@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:jaxws="http://cxf.apache.org/jaxws"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="
+           http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		   http://cxf.apache.org/jaxws http://cxf.apache.org/schemas/jaxws.xsd">
+
+    <import resource="classpath:META-INF/cxf/cxf.xml"/>
+   <!-- <import resource="classpath:META-INF/cxf/cxf-extension-soap.xml"/>-->
+    <import resource="classpath:META-INF/cxf/cxf-servlet.xml"/>
+
+    <jaxws:client name="{urn:ihe:iti:xds-b:2007}DocumentRegistry_Port_Soap12"
+                  createdFromAPI="true">
+       <jaxws:properties>
+         <entry key="ws-security.sts.client">
+           <bean id="stsClient" class="org.apache.cxf.ws.security.trust.STSClient">
+             <constructor-arg ref="cxf"/>
+             <property name="wsdlLocation"
+                   value="http://localhost:8092/X509?wsdl"/>
+             <property name="serviceName"
+                   value="{http://docs.oasis-open.org/ws-sx/ws-trust/200512/}SecurityTokenService"/>
+             <property name="endpointName"
+                   value="{http://docs.oasis-open.org/ws-sx/ws-trust/200512/}UT_Port"/>
+             <property name="properties">
+                 <map>
+                     <entry key="ws-security.username" value="alice"/>
+                     <entry key="ws-security.signature.username" value="myclientkey"/>
+                     <entry key="ws-security.callback-handler"
+                            value="com.poc.xua.test.XuaTestCallbackHandler"/>
+                     <entry key="ws-security.signature.properties" value="clientKeystore.properties"/>
+                     <entry key="ws-security.encryption.properties" value="clientKeystore.properties"/>
+                     <entry key="ws-security.encryption.username" value="mystskey"/>
+                     <entry key="ws-security.sts.token.username" value="myclientkey"/>
+                     <entry key="ws-security.sts.token.properties" value="clientKeystore.properties"/>
+                 </map>
+             </property>
+           </bean>
+         </entry>
+       </jaxws:properties>
+     </jaxws:client>
+</beans>

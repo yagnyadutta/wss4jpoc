@@ -36,7 +36,7 @@ public class XuaValidator implements Validator{
         try {
 
             LogUtil.debug(log, "Validating SAML Token issued by {0}", samlToken.getIssuer().getValue());
-            if (!credential.getSamlAssertion().isSigned() || true)
+            if (!credential.getSamlAssertion().isSigned())
             {
                 LogUtil.error(log, "Token Validation failed");
                 throw new WSSecurityException(WSSecurityException.ErrorCode.INVALID_SECURITY_TOKEN);

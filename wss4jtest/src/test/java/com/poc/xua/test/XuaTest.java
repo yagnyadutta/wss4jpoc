@@ -12,8 +12,10 @@ import org.apache.cxf.bus.spring.SpringBusFactory;
 import org.apache.cxf.sts.token.provider.CustomAttributeStatementProvider;
 import org.apache.cxf.transport.servlet.CXFServlet;
 import org.apache.cxf.ws.security.trust.STSClient;
+import org.apache.wss4j.dom.engine.WSSConfig;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.openehealth.ipf.commons.ihe.xds.core.SampleData;
 import org.openehealth.ipf.commons.ihe.xds.core.requests.RegisterDocumentSet;
@@ -32,13 +34,14 @@ import java.util.*;
 /**
  * XUA Test Class
  */
+
 public class XuaTest extends JettyTestContainer {
 
     static private XuaConfig configuration;
     static private STSClient stsClient;
     static private final String SUCCESS = "success";
     static private final String FAILURE = "failure";
-    static private final String FAILURE_MSG = "Error processing the request";
+    static private final String FAILURE_MSG = "A security error was encountered when verifying the message";
     static private SubmitObjectsRequest submitObjectsRequest;
 
     /**
@@ -47,6 +50,7 @@ public class XuaTest extends JettyTestContainer {
      */
     @BeforeClass
     public static void setUpClass () throws Exception    {
+        WSSConfig.init();
         String certificateFile = XuaTest.class.getClassLoader().getResource("certificates/stsstore.jks").getFile();
         startSecureAndUnSecureServer(new CXFServlet(), "spring/xua-test-server-context.xml", certificateFile, "stskpass",
                 certificateFile, "stsspass");
@@ -139,7 +143,7 @@ public class XuaTest extends JettyTestContainer {
                 Assert.fail();
             } else {
                 Assert.assertTrue(
-                    ex.getCause().getMessage().contains(msg));
+                    ex.getMessage().contains(msg));
             }
         } finally {
             SpringBusFactory.setThreadDefaultBus(null);
